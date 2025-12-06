@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>检测信息展示</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            color: #333;
+        }
+        .container {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+        .info {
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .info label {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>检测信息</h1>
+    <div id="infoContainer"></div>
+</div>
+
+<script>
+    // API 地址数组
+    const urls = [
+        'https://idshare001.me/node/getid.php?getid=1', // 替换为第一个API地址
+        'https://idshare001.me/node/getid.php?getid=2'  // 替换为第二个API地址
+    ];
+
+    // 获取数据并展示
+    function fetchData() {
+        Promise.all(urls.map(url => fetch(url).then(response => response.json())))
+            .then(results => {
+                // 合并结果
+                const combinedData = results.flat();
+                displayData(combinedData);
+            })
+            .catch(error => console.error('获取数据失败:', error));
+    }
+
+    // 展示数据
+    function displayData(data) {
+        const infoContainer = document.getElementById('infoContainer');
+
+        // 清空旧的数据
+        infoContainer.innerHTML = '';
+
+        // 格式化并展示每个字段
+        data.forEach(item => {
+            const infoDiv = document.createElement('div');
+            infoDiv.className = 'info';
+
+// 判断状态并生成相应输出
+            let statusText = '';
+            let statusClass = '';
+
+            if (item.status === 1) {
+                statusText = '正常';
+                statusClass = 'status-normal';
+            } else if (item.status === 0) {
+                statusText = '禁用';
+                statusClass = 'status-disabled';
+            }
+
+            infoDiv.innerHTML = `
+                <p><label>国家:</label> ${item.country}</p>
+                <p><label>ID:</label> ${item.username}</p>
+                <p><label>密码:</label> ${item.password}</p>
+                <p class="${statusClass}"><label>状态:</label> ${statusText}</p>
+                <p><label>更新时间:</label> ${item.time}</p>
+            `;
+            infoContainer.appendChild(infoDiv);
+        });
+    }
+
+    // 页面加载时获取数据
+    window.onload = fetchData;
+</script>
+
+</body>
+</html>
