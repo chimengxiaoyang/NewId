@@ -180,6 +180,97 @@
             color: var(--danger-color);
         }
 
+        .modal {
+            display: flex;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.3s;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 40px;
+            border-radius: var(--border-radius);
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.3s;
+        }
+
+        .modal-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .modal-header h2 {
+            color: var(--primary-color);
+            margin: 0;
+            font-size: 1.8rem;
+        }
+
+        .modal-body {
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        .input-group input:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #2980b9;
+        }
+
+        .btn-secondary {
+            background-color: #95a5a6;
+            color: white;
+            margin-right: 10px;
+        }
+
+        .btn-secondary:hover {
+            background-color: #7f8c8d;
+        }
+
         .loading {
             display: none;
             text-align: center;
@@ -321,12 +412,38 @@
             .header .subtitle {
                 font-size: 1rem;
             }
+            
+            .modal-content {
+                padding: 20px;
+            }
+            
+            .modal-header h2 {
+                font-size: 1.5rem;
+            }
         }
     </style>
 </head>
 <body>
 
-<div class="container" id="content">
+<div class="modal" id="passwordModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2><i class="fas fa-lock"></i> 身份验证</h2>
+            <p style="color: #7f8c8d; margin-top: 10px;">请输入密码查看内容</p>
+        </div>
+        <div class="modal-body">
+            <div class="input-group">
+                <input type="password" id="passwordInput" placeholder="请输入访问密码" autofocus>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="cancelLogin()">取消</button>
+            <button class="btn btn-primary" onclick="verifyPassword()">确认</button>
+        </div>
+    </div>
+</div>
+
+<div class="container" id="content" style="display: none;">
     <div class="header">
         <h1><i class="fas fa-apple-alt"></i> iOS 共享账号 不要登陆在设置里面！！！</h1>
         <p class="subtitle">实时更新可用账号，不可用请点击右下角刷新</p>
@@ -348,57 +465,185 @@
     <i class="fas fa-check"></i> 已复制到剪贴板
 </div>
 
-<button class="refresh-btn" id="refreshBtn" onclick="fetchData()" title="刷新数据">
+<button class="refresh-btn" id="refreshBtn" onclick="fetchData()" title="刷新数据" style="display: none;">
     <i class="fas fa-sync-alt"></i>
 </button>
 
 <script>
+    // 请在这里设置您的访问密码
+    const correctPassword = "123456";
+
     // API 地址数组
     const urls = [
         'https://idshare001.me/node/getid.php?getid=1', 
         'https://idshare001.me/node/getid.php?getid=2'  
     ];
 
-    // 页面加载时自动获取数据
-    window.onload = fetchData;
+    // 验证密码
+    function verifyPassword() {
+        const userInput = document.getElementById('passwordInput').value;
+        if (userInput === correctPassword) {
+            // 密码正确，隐藏弹窗并显示内容
+            document.getElementById('passwordModal').style.display = 'none';
+            document.getElementById("content").style.display = "block";
+            document.getElementById("refreshBtn").style.display = 'flex';
+            fetchData();
+        } else {
+            // 密码错误，显示提示
+            document.getElementById('passwordInput').style.borderColor = 'var(--danger-color)';
+            document.getElementById('passwordInput').value = '';
+            document.getElementById('passwordInput').placeholder = '密码错误，请重试';
+            document.getElementById('passwordInput').focus();
+        }
+    }
+
+    // 取消登录
+    function cancelLogin() {
+        window.location.href = "about:blank";
+    }
 
     // 获取数据并展示
-    function fetchData() {
-        const loading = document.getElementById('loading');
-        const errorMessage = document.getElementById('errorMessage');
-        const refreshBtn = document.getElementById('refreshBtn');
-        const infoContainer = document.getElementById('infoContainer');
+async function fetchData() {
+    const loading = document.getElementById('loading');
+    const errorMessage = document.getElementById('errorMessage');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const infoContainer = document.getElementById('infoContainer');
+    
+    // 显示加载状态
+    loading.style.display = 'block';
+    errorMessage.style.display = 'none';
+    infoContainer.innerHTML = '';
+    refreshBtn.disabled = true;
+    refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    
+    try {
+        // 尝试多种代理方法获取数据
+        const results = await Promise.allSettled(
+            urls.map(async (url, index) => {
+                console.log(`尝试获取数据 ${index + 1}: ${url}`);
+                
+                // 方法列表：尝试多个不同的CORS代理
+                const proxyMethods = [
+                    
+                    
+                    // 方法3：使用allorigins代理
+                    async () => {
+                        try {
+                            const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
+                            const response = await fetch(proxyUrl);
+                            if (response.ok) {
+                                const data = await response.json();
+                                // allorigins返回的数据在contents属性里
+                                return JSON.parse(data.contents);
+                            }
+                        } catch (e) {
+                            console.log(`方法3失败: ${e.message}`);
+                            throw e;
+                        }
+                    },
+                    
+                    // 方法4：使用codetabs代理
+                    async () => {
+                        try {
+                            const proxyUrl = 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(url);
+                            const response = await fetch(proxyUrl);
+                            if (response.ok) {
+                                return await response.json();
+                            }
+                        } catch (e) {
+                            console.log(`方法4失败: ${e.message}`);
+                            throw e;
+                        }
+                    },
+                    
+                    // 方法5：使用cors-proxy代理
+                    async () => {
+                        try {
+                            const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(url);
+                            const response = await fetch(proxyUrl);
+                            if (response.ok) {
+                                return await response.json();
+                            }
+                        } catch (e) {
+                            console.log(`方法5失败: ${e.message}`);
+                            throw e;
+                        }
+                    }
+                ];
+                
+                // 依次尝试各种方法
+                for (let i = 0; i < proxyMethods.length; i++) {
+                    try {
+                        console.log(`尝试方法 ${i + 1} 获取数据 ${index + 1}`);
+                        const data = await proxyMethods[i]();
+                        if (data) {
+                            console.log(`方法 ${i + 1} 成功获取数据 ${index + 1}`);
+                            return data;
+                        }
+                    } catch (error) {
+                        console.log(`方法 ${i + 1} 失败:`, error.message);
+                        // 继续尝试下一个方法
+                        continue;
+                    }
+                }
+                
+                throw new Error(`无法获取数据 ${index + 1}: 所有代理方法都失败了`);
+            })
+        );
         
-        // 显示加载状态
-        loading.style.display = 'block';
-        errorMessage.style.display = 'none';
-        infoContainer.innerHTML = '';
-        refreshBtn.disabled = true;
-        refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        console.log('所有请求结果:', results);
         
-        Promise.all(urls.map(url => fetch(url).then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+        // 处理结果
+        const successfulResults = results
+            .filter(result => result.status === 'fulfilled' && result.value)
+            .map(result => result.value);
+        
+        if (successfulResults.length > 0) {
+            console.log(`成功获取 ${successfulResults.length} 个数据源`);
+            
+            // 合并并处理数据
+            const combinedData = successfulResults.flat();
+            
+            // 确保数据是数组
+            if (!Array.isArray(combinedData)) {
+                console.warn('数据不是数组格式，尝试转换:', combinedData);
+                displayData([combinedData]);
+            } else {
+                displayData(combinedData);
             }
-            return response.json();
-        })))
-        .then(results => {
-            // 合并结果
-            const combinedData = results.flat();
-            displayData(combinedData);
-        })
-        .catch(error => {
-            console.error('获取数据失败:', error);
-            document.getElementById('errorText').textContent = '数据加载失败，请稍后再试';
-            errorMessage.style.display = 'block';
-        })
-        .finally(() => {
-            // 隐藏加载状态
-            loading.style.display = 'none';
-            refreshBtn.disabled = false;
-            refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i>';
-        });
+        } else {
+            // 所有方法都失败了
+            const errorMsg = results
+                .filter(r => r.status === 'rejected')
+                .map(r => r.reason?.message || '未知错误')
+                .join('; ');
+            
+            throw new Error(`数据获取失败: ${errorMsg}`);
+        }
+        
+    } catch (error) {
+        console.error('获取数据失败:', error);
+        document.getElementById('errorText').textContent = 
+            '数据加载失败: ' + (error.message || '请检查网络连接或稍后再试');
+        errorMessage.style.display = 'block';
+        
+        // 显示错误详情和解决方案
+        const errorDetails = document.createElement('div');
+        errorDetails.innerHTML = `
+            <p style="margin-top: 10px; font-size: 0.9em;">
+                <strong>可能的解决方案：</strong><br>
+                1. 检查网络连接<br>
+                2. 稍后重试<br>
+                3. API服务器可能需要启用CORS支持
+            </p>
+        `;
+        errorMessage.appendChild(errorDetails);
+    } finally {
+        loading.style.display = 'none';
+        refreshBtn.disabled = false;
+        refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i>';
     }
+}
 
     // 展示数据
     function displayData(data) {
@@ -572,6 +817,13 @@
             notification.style.display = 'none';
         }, 2000);
     }
+
+    // 监听回车键
+    document.getElementById('passwordInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            verifyPassword();
+        }
+    });
 </script>
 
 </body>
